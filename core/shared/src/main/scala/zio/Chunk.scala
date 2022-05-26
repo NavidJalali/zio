@@ -1746,6 +1746,29 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
       BitChunk(bytes.drop(toDrop), min, max)
     }
 
+    private def bitwise(that: BitChunk, f: (Boolean, Boolean) => Boolean): BitChunk = {
+      val size = self.length min that.length
+      if (size == 0)
+        BitChunk(Chunk.empty, 0, 0)
+      else {
+        val arr = Array.ofDim[Byte]((size >> 3) + 1)
+        (0 until size).foreach { offset =>
+          if (f(self.apply(self.minBitIndex + offset), that.apply(that.minBitIndex + offset)))
+            arr(offset >> 3) = (arr(offset >> 3) | ((1 << (7 - (offset & 7))))).toByte
+        }
+        BitChunk(Chunk.fromArray(arr), 0, size)
+      }
+    }
+
+    def and(that: BitChunk): BitChunk =
+      bitwise(that, _ && _)
+
+    def or(that: BitChunk): BitChunk =
+      bitwise(that, _ && _)
+
+    def xor(that: BitChunk): BitChunk =
+      bitwise(that, _ ^ _)
+
     override def foreach[A](f: Boolean => A): Unit = {
       val minByteIndex    = (minBitIndex + 7) >> 3
       val maxByteIndex    = maxBitIndex >> 3
